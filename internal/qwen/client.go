@@ -26,9 +26,18 @@ import (
 	"qwen2api/internal/ssxmod"
 )
 
+// 上游前端版本号，必须与 chat.qwen.ai 线上实际版本一致，否则 chat/completions 会返回
+// Bad_Request / "Internal error..."（chats/new 和 models 不做此校验，所以只有对话会挂）。
+// 来源与核对方式：
+//   - qwenWebVersion 对应 https://chat.qwen.ai 页面静态资源路径里的前端包版本，
+//     形如 https://assets.alicdn.com/g/qwenweb/qwen-chat-fe/<版本>/js/...；
+//   - qwenBxVersion 对应前端请求头 bx-v，用浏览器 DevTools 抓一次 chat/completions 即得。
+//
+// 上游每次前端发版都可能同时提升二者，导致本项目回复全部失效，需同步跟进。
+// 最近一次核对：2026-11-09，线上为 0.3.38 / 2.5.37（旧值 0.2.68 / 2.5.36 已失效）。
 const (
-	qwenWebVersion = "0.2.68"
-	qwenBxVersion  = "2.5.36"
+	qwenWebVersion = "0.3.38"
+	qwenBxVersion  = "2.5.37"
 )
 
 type Client struct {

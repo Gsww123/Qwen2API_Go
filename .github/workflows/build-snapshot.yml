@@ -1,0 +1,66 @@
+name: build-snapshot
+
+# 每次推送到 main 自动构建 Windows 可执行包，方便直接下载试用。
+# 正式发版仍由 release-please -> release-assets 产出全平台包，二者互不干扰。
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 准备 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: public/package-lock.json
+
+      # 后台管理页面需要用 Next 构建出静态文件，缺失时 exe 只能提供接口
+      - name: 安装前端依赖
+        working-directory: public
+        run: npm ci
+
+      - name: 构建前端
+        working-directory: public
+        run: npm run build
+
+      - name: 准备 Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: 编译 Windows 可执行文件
+        shell: pwsh
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          # 版本号取自 release-please 的清单文件，避免手工维护
+          $version = (Get-Content .release-please-manifest.json | ConvertFrom-Json).'.'
+          $packageName = "qwen2api_${version}_windows_amd64"
+          $packageDir = "dist/$packageName"
+          New-Item -ItemType Directory -Force -Path "$packageDir/public" | Out-Null
+          go build -trimpath -ldflags="-s -w" -o "$packageDir/qwen2api.exe" ./cmd/qwen2api
+          if ($LASTEXITCODE -ne 0) { throw "go build 失败" }
+          Copy-Item README.md "$packageDir/README.md"
+          Copy-Item CONFIGURATION.md "$packageDir/CONFIGURATION.md"
+          Copy-Item -Recurse public/out "$packageDir/public/out"
+          Compress-Archive -Path $packageDir -DestinationPath "dist/$packageName.zip" -Force
+          "PACKAGE_NAME=$packageName" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE_NAME }}
+          path: dist/${{ env.PACKAGE_NAME }}.zip
+          if-no-files-found: error
+          retention-days: 30

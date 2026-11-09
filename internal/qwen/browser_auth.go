@@ -333,7 +333,7 @@ func browserProbeScript(guest bool) string {
     body: JSON.stringify({typarms: {
       typarm1: "web", typarm2: "", typarm3: "prod", typarm4: "qwen_chat", typarm5: "product", typarm6: "",
       orgid: "tongyi", share_id: "", project_id: "", channel_type: "", community_type: "", from_id: "",
-      cdn_version: "0.2.68", spmId: "a2ty_o01.29997170", aemPageId: "//chat.qwen.ai/c/new-chat", domain: "chat.qwen.ai"
+      cdn_version: "%s", spmId: "a2ty_o01.29997170", aemPageId: "//chat.qwen.ai/c/new-chat", domain: "chat.qwen.ai"
     }})
   }).catch(() => null))
   .then(() => fetch("/api/v2/chats/new", {
@@ -348,7 +348,7 @@ func browserProbeScript(guest bool) string {
       timestamp: Date.now(),
       project_id: ""
     })
-  }).catch(() => null));`, chatMode)
+  }).catch(() => null));`, qwenWebVersion, chatMode)
 }
 
 func (c *Client) browserExecutablePath() string {

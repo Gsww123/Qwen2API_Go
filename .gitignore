@@ -10,3 +10,6 @@ data
 *.log
 test
 *.har
+
+# 代码索引工具产物
+.codegraph
